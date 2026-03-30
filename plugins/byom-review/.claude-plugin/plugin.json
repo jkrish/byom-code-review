@@ -1,0 +1,7 @@
+{
+  "name": "byom-review",
+  "description": "Bring Your Own Model — code review with any AI model via OpenRouter.",
+  "author": {
+    "name": "byom"
+  }
+}

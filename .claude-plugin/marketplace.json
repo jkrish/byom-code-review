@@ -1,21 +1,21 @@
 {
-  "name": "openai-codex",
+  "name": "byom-review",
   "owner": {
-    "name": "OpenAI"
+    "name": "byom"
   },
   "metadata": {
-    "description": "Codex plugins to use in Claude Code for delegation and code review.",
+    "description": "Bring Your Own Model — code review with any AI model via OpenRouter.",
     "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "codex",
-      "description": "Use Codex from Claude Code to review code or delegate tasks.",
+      "name": "byom-review",
+      "description": "Code review with any AI model via OpenRouter.",
       "version": "1.0.0",
       "author": {
-        "name": "OpenAI"
+        "name": "byom"
       },
-      "source": "./plugins/codex"
+      "source": "./plugins/byom-review"
     }
   ]
 }
