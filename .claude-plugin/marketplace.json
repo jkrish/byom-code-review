@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Bring Your Own Model — code review with any AI model via OpenRouter.",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
       "name": "byom-review",
       "description": "Code review with any AI model via OpenRouter.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "author": {
         "name": "byom"
       },
