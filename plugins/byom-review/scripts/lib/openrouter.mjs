@@ -1,5 +1,5 @@
 const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4";
+const DEFAULT_MODEL = "minimax/minimax-m2.7";
 const API_KEY_ENV = "OPENROUTER_API_KEY";
 const DEFAULT_MODEL_ENV = "BYOM_DEFAULT_MODEL";
 

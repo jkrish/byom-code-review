@@ -40,7 +40,7 @@ Run setup to verify:
 | Variable | Required | Description |
 |---|---|---|
 | `OPENROUTER_API_KEY` | Yes | Your OpenRouter API key |
-| `BYOM_DEFAULT_MODEL` | No | Default model ID (default: `anthropic/claude-sonnet-4`) |
+| `BYOM_DEFAULT_MODEL` | No | Default model ID (default: `minimax/minimax-m2.7`) |
 
 You can also pass `--model <id>` on any review command to override the default.
 
@@ -114,6 +114,92 @@ Reviews produce structured JSON output with:
 4. Returns the review result
 
 The plugin uses OpenRouter's OpenAI-compatible API with structured output support. For models that don't support `json_schema` response format, it falls back to embedding the schema in the system prompt.
+
+## Local Development
+
+### Setup
+
+Clone the repo and start Claude Code with the `--plugin-dir` flag pointing to the plugins directory:
+
+```bash
+git clone https://github.com/jkrish/byom-code-review.git
+cd byom-code-review
+claude --plugin-dir ./plugins
+```
+
+This loads all plugins under `plugins/` (including `byom-review`) without needing to install them from a registry. Changes to plugin files take effect on the next Claude Code restart.
+
+### Project Structure
+
+```
+plugins/byom-review/
+├── commands/          # Slash command definitions (Markdown)
+│   ├── review.md
+│   ├── adversarial-review.md
+│   └── setup.md
+├── hooks/
+│   └── hooks.json     # Lifecycle hooks configuration
+├── prompts/           # Prompt templates used by review commands
+├── schemas/           # JSON schemas for structured review output
+├── scripts/
+│   ├── byom-companion.mjs        # Main companion script (setup, review logic)
+│   ├── session-lifecycle-hook.mjs # Session hook entry point
+│   └── lib/                       # Shared utilities
+├── CHANGELOG.md
+├── LICENSE
+└── NOTICE
+```
+
+### Debugging
+
+**Check plugin registration:**
+
+```bash
+/plugin
+```
+
+Verify `byom-review` appears in the list.
+
+**Run setup diagnostics:**
+
+```bash
+/byom-review:setup
+```
+
+This checks API key configuration and reports any issues as JSON.
+
+**Run the companion script directly:**
+
+You can invoke the companion script outside of Claude Code for faster iteration:
+
+```bash
+# Check setup status
+node plugins/byom-review/scripts/byom-companion.mjs setup --json
+
+# Run a review (requires OPENROUTER_API_KEY in env)
+node plugins/byom-review/scripts/byom-companion.mjs review --json
+
+# Run with a specific model
+node plugins/byom-review/scripts/byom-companion.mjs review --model openai/gpt-4o --json
+```
+
+**Enable verbose output:**
+
+Set `DEBUG=byom` to see request/response details:
+
+```bash
+DEBUG=byom node plugins/byom-review/scripts/byom-companion.mjs review --json
+```
+
+**Common issues:**
+
+| Problem | Fix |
+|---|---|
+| `OPENROUTER_API_KEY not set` | Export the key: `export OPENROUTER_API_KEY=sk-or-v1-...` |
+| Plugin not found after launch | Ensure `--plugin-dir` points to the `plugins/` directory |
+| Changes not reflected | Restart Claude Code with `--plugin-dir` — plugin files are loaded at startup |
+| Model returns malformed JSON | Try a different model — not all models handle `json_schema` response format reliably |
+| Node version errors | Requires Node.js 18.18+. Check with `node --version` |
 
 ## License
 
