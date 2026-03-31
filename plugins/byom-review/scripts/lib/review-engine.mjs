@@ -106,6 +106,12 @@ export async function runReview({ client, gitContext, systemPrompt, schema, mode
     throw error;
   }
 
+  // Some models silently return empty content when they don't support json_schema —
+  // retry with json_object fallback (schema injected into the prompt instead).
+  if (useJsonSchema && !result.content) {
+    return runReview({ client, gitContext, systemPrompt, schema, model, signal, useJsonSchema: false });
+  }
+
   const parsed = parseStructuredOutput(result.content);
 
   return {

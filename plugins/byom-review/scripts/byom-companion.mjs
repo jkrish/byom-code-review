@@ -165,6 +165,9 @@ async function executeMultiModelReview(request) {
   const schema = readOutputSchema(REVIEW_SCHEMA_PATH);
   const systemPrompt = buildStandardReviewPrompt(context);
 
+  const capabilityClient = new OpenRouterClient();
+  const structuredOutputModels = await capabilityClient.getStructuredOutputSupport(request.models);
+
   const tasks = request.models.map((model) => ({
     key: model,
     fn: async (signal) => {
@@ -176,7 +179,8 @@ async function executeMultiModelReview(request) {
         systemPrompt,
         schema,
         model,
-        signal
+        signal,
+        useJsonSchema: structuredOutputModels.has(model)
       });
       return {
         reviewResult,
@@ -291,12 +295,16 @@ async function executeReviewRun(request) {
       ? buildAdversarialReviewPrompt(context, focusText)
       : buildStandardReviewPrompt(context);
 
+  const modelId = request.model || client.defaultModel;
+  const structuredOutputModels = await client.getStructuredOutputSupport([modelId]);
+
   const reviewResult = await runReview({
     client,
     gitContext: context,
     systemPrompt,
     schema,
-    model: request.model
+    model: modelId,
+    useJsonSchema: structuredOutputModels.has(modelId)
   });
 
   const parsed = reviewResult.result;

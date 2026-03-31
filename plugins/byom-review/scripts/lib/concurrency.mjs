@@ -1,4 +1,4 @@
-const DEFAULT_STRAGGLER_TIMEOUT_MS = 60_000;
+const DEFAULT_STRAGGLER_TIMEOUT_MS = 300_000;
 const DEFAULT_GLOBAL_TIMEOUT_MS = 300_000;
 
 export function getTimeoutConfig() {

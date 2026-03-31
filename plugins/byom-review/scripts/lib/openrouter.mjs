@@ -94,6 +94,29 @@ export class OpenRouterClient {
     return data.data ?? [];
   }
 
+  /**
+   * Check which models support structured_outputs (json_schema response format).
+   * Returns a Set of model IDs that support it.
+   */
+  async getStructuredOutputSupport(modelIds) {
+    try {
+      const allModels = await this.listModels();
+      const lookup = new Map(allModels.map((m) => [m.id, m]));
+      const supported = new Set();
+      for (const id of modelIds) {
+        const meta = lookup.get(id);
+        if (meta?.supported_parameters?.includes("structured_outputs")) {
+          supported.add(id);
+        }
+      }
+      return supported;
+    } catch {
+      // If the models endpoint fails, assume all support it and let the
+      // runtime fallback handle any that don't.
+      return new Set(modelIds);
+    }
+  }
+
   async validateApiKey() {
     try {
       const models = await this.listModels();
