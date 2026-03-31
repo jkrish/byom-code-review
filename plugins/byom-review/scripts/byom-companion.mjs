@@ -187,6 +187,9 @@ function renderReviewResult(parsed, { reviewLabel, targetLabel, model, usage }) 
   if (usage) {
     lines.push("");
     lines.push(`Tokens: ${usage.prompt_tokens ?? "?"} prompt, ${usage.completion_tokens ?? "?"} completion`);
+    if (usage.cost != null) {
+      lines.push(`Cost: $${usage.cost.toFixed(6)}`);
+    }
   }
 
   lines.push("");
