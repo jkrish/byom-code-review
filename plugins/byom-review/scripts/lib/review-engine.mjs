@@ -63,7 +63,7 @@ function buildStructuredOutputInstructions(schema) {
   ].join("\n");
 }
 
-export async function runReview({ client, gitContext, systemPrompt, schema, model, useJsonSchema = true }) {
+export async function runReview({ client, gitContext, systemPrompt, schema, model, signal, useJsonSchema = true }) {
   const messages = [];
 
   if (useJsonSchema) {
@@ -96,11 +96,12 @@ export async function runReview({ client, gitContext, systemPrompt, schema, mode
     result = await client.chatCompletion({
       messages,
       model,
-      responseFormat
+      responseFormat,
+      signal
     });
   } catch (error) {
     if (useJsonSchema && error.message?.includes("does not support")) {
-      return runReview({ client, gitContext, systemPrompt, schema, model, useJsonSchema: false });
+      return runReview({ client, gitContext, systemPrompt, schema, model, signal, useJsonSchema: false });
     }
     throw error;
   }

@@ -16,7 +16,7 @@ export class OpenRouterClient {
     return Boolean(this.apiKey);
   }
 
-  async chatCompletion({ messages, model, responseFormat, temperature, maxTokens }) {
+  async chatCompletion({ messages, model, responseFormat, temperature, maxTokens, signal }) {
     if (!this.apiKey) {
       throw new Error(
         `OPENROUTER_API_KEY is not set. Get one at https://openrouter.ai/keys and set it in your environment.`
@@ -38,7 +38,7 @@ export class OpenRouterClient {
       body.max_tokens = maxTokens;
     }
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const fetchOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -47,7 +47,12 @@ export class OpenRouterClient {
         "X-Title": "byom-code-review"
       },
       body: JSON.stringify(body)
-    });
+    };
+    if (signal) {
+      fetchOptions.signal = signal;
+    }
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, fetchOptions);
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
