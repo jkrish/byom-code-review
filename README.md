@@ -23,6 +23,12 @@ Add the plugin in Claude Code:
 /plugin install byom-review
 ```
 
+> **Note:** While the plugin is pending marketplace review, you can install directly from the repo:
+> ```bash
+> /plugin marketplace add jkrish/byom-code-review
+> /plugin install byom-review
+> ```
+
 Then set your API key:
 
 ```bash
