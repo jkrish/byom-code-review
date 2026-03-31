@@ -157,7 +157,13 @@ function renderReviewResult(parsed, { reviewLabel, targetLabel, model, usage }) 
   }
 
   const result = parsed.parsed;
-  lines.push(`Verdict: ${result.verdict}`);
+  let verdict = result.verdict;
+  let verdictInferred = false;
+  if (!verdict) {
+    verdictInferred = true;
+    verdict = "needs-attention";
+  }
+  lines.push(`Verdict: ${verdict}${verdictInferred ? " (inferred)" : ""}`);
   lines.push("");
   lines.push(`Summary: ${result.summary}`);
 
@@ -169,7 +175,9 @@ function renderReviewResult(parsed, { reviewLabel, targetLabel, model, usage }) 
       lines.push(`  [${finding.severity.toUpperCase()}] ${finding.title}`);
       lines.push(`  File: ${finding.file}:${finding.line_start}-${finding.line_end}`);
       lines.push(`  Confidence: ${finding.confidence}`);
-      lines.push(`  ${finding.body}`);
+      if (finding.body) {
+        lines.push(`  ${finding.body}`);
+      }
       if (finding.recommendation) {
         lines.push(`  → ${finding.recommendation}`);
       }
