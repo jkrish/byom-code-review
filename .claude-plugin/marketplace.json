@@ -1,7 +1,7 @@
 {
   "name": "byom-review",
   "owner": {
-    "name": "byom"
+    "name": "Krishna Janakiraman"
   },
   "metadata": {
     "description": "Bring Your Own Model — code review with any AI model via OpenRouter.",
@@ -13,7 +13,7 @@
       "description": "Code review with any AI model via OpenRouter.",
       "version": "1.2.0",
       "author": {
-        "name": "byom"
+        "name": "Krishna Janakiraman"
       },
       "source": "./plugins/byom-review"
     }
