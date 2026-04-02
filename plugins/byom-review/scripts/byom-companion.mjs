@@ -269,6 +269,10 @@ async function handleReview(argv, reviewName = "Review") {
     }
   });
 
+  if (options.models) {
+    throw new Error("--models (multi-model comparison) is not yet implemented. Use --model to run a single model.");
+  }
+
   const provider = resolveProvider({ provider: options.provider });
   const cwd = resolveCommandCwd(options);
   const focusText = positionals.join(" ").trim();
