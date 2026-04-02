@@ -1,11 +1,11 @@
 ---
 description: Run an adversarial review that challenges implementation approach and design choices
-argument-hint: '[--model <id>] [--base <ref>] [--scope auto|working-tree|branch] [focus ...]'
+argument-hint: '[--provider <name>] [--model <id>] [--base <ref>] [--scope auto|working-tree|branch] [focus ...]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
 
-Run an adversarial code review through OpenRouter using any model.
+Run an adversarial code review using any model via the configured provider.
 Position it as a challenge review that questions the chosen implementation, design choices, tradeoffs, and assumptions.
 It is not just a stricter pass over implementation defects.
 
@@ -36,7 +36,8 @@ Execution mode rules:
 Argument handling:
 - Preserve the user's arguments exactly.
 - Do not weaken the adversarial framing or rewrite the user's focus text.
-- Supported models: any model ID from OpenRouter (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-4o`, `google/gemini-2.0-flash`).
+- Supported providers: `openrouter` (default), `baseten`, `custom`. Use `--provider <name>` to select.
+- Supported models: any model ID supported by the selected provider.
 - It supports working-tree review, branch review, and `--base <ref>`.
 - Unlike `/byom-review:review`, it can take extra focus text after the flags.
 

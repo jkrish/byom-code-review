@@ -1,5 +1,5 @@
 ---
-description: Check whether the BYOM review plugin is configured with an OpenRouter API key
+description: Check which providers are configured for BYOM code reviews
 argument-hint: ''
 allowed-tools: Bash(node:*), AskUserQuestion
 ---
@@ -12,12 +12,16 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/byom-companion.mjs" setup --json $ARGUMENTS
 
 Present the setup output to the user.
 
-If the API key is not configured:
-- Explain that the user needs to set `OPENROUTER_API_KEY` in their environment.
-- Direct them to https://openrouter.ai/keys to get a key.
-- Suggest: `export OPENROUTER_API_KEY=your-key-here`
+The setup command shows a dashboard of all configured providers (OpenRouter, Baseten, custom).
+
+If no providers are configured:
+- Explain that the user needs at least one provider API key.
+- For OpenRouter: direct them to https://openrouter.ai/keys and suggest `export OPENROUTER_API_KEY=your-key-here`
+- For Baseten: suggest `export BASETEN_API_KEY=your-key-here`
+- For a custom OpenAI-compatible endpoint: suggest `export BYOM_CUSTOM_API_KEY=... and export BYOM_CUSTOM_BASE_URL=...`
 
 Optional configuration:
+- `BYOM_DEFAULT_PROVIDER` — set the default provider (defaults to `openrouter`).
 - `BYOM_DEFAULT_MODEL` — set a default model (defaults to `minimax/minimax-m2.7`).
-- The `--model` flag on review commands overrides the default.
-- Any model available on OpenRouter can be used (e.g., `openai/gpt-4o`, `google/gemini-2.0-flash`, `meta-llama/llama-3.1-405b-instruct`).
+- The `--provider` flag on review commands overrides the default provider.
+- The `--model` flag on review commands overrides the default model.

@@ -1,6 +1,6 @@
 ---
 description: Run a code review using any model via OpenRouter
-argument-hint: '[--model <id>] [--base <ref>] [--scope auto|working-tree|branch]'
+argument-hint: '[--provider <name>] [--model <id>] [--base <ref>] [--scope auto|working-tree|branch]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
@@ -33,7 +33,8 @@ Execution mode rules:
 Argument handling:
 - Preserve the user's arguments exactly.
 - The companion script parses `--wait`, `--model`, `--base`, and `--scope`.
-- Supported models: any model ID from OpenRouter (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-4o`, `google/gemini-2.0-flash`).
+- Supported providers: `openrouter` (default), `baseten`, `custom`. Use `--provider <name>` to select.
+- Supported models: any model ID supported by the selected provider (e.g., `anthropic/claude-sonnet-4` on OpenRouter, `deepseek-ai/DeepSeek-V3.1` on Baseten).
 - It supports working-tree review, branch review, and `--base <ref>`.
 - If the user needs custom review instructions or more adversarial framing, they should use `/byom-review:adversarial-review`.
 
