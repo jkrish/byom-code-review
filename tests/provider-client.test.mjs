@@ -102,3 +102,18 @@ test("chatCompletion throws with provider-specific error for openrouter", async 
     }
   }
 });
+
+test("chatCompletion passes signal to fetch (abort throws)", async () => {
+  const provider = getProvider("openrouter");
+  const client = new ProviderClient(provider, { apiKey: "sk-test" });
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    () => client.chatCompletion({
+      messages: [{ role: "user", content: "hi" }],
+      model: "test",
+      signal: controller.signal
+    }),
+    (error) => error.name === "AbortError" || error.message.includes("abort")
+  );
+});

@@ -13,7 +13,7 @@ export class ProviderClient {
     return Boolean(this.apiKey);
   }
 
-  async chatCompletion({ messages, model, responseFormat, temperature, maxTokens }) {
+  async chatCompletion({ messages, model, responseFormat, temperature, maxTokens, signal }) {
     if (!this.apiKey) {
       throw new Error(
         `${this.provider.apiKeyEnv} is not set. Set it in your environment to use ${this.provider.label}.`
@@ -44,7 +44,8 @@ export class ProviderClient {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal
     });
 
     if (!response.ok) {
