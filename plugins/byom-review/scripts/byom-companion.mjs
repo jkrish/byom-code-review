@@ -23,8 +23,8 @@ function printUsage() {
     [
       "Usage:",
       "  node scripts/byom-companion.mjs setup [--json]",
-      "  node scripts/byom-companion.mjs review [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>]",
-      "  node scripts/byom-companion.mjs adversarial-review [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>] [focus text]"
+      "  node scripts/byom-companion.mjs review [--provider <name>] [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>]",
+      "  node scripts/byom-companion.mjs adversarial-review [--provider <name>] [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>] [focus text]"
     ].join("\n")
   );
 }
