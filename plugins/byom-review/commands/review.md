@@ -1,11 +1,11 @@
 ---
-description: Run a code review using any model via OpenRouter
+description: Run a code review using any model via the configured provider
 argument-hint: '[--provider <name>] [--model <id>] [--base <ref>] [--scope auto|working-tree|branch]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
 
-Run a code review through OpenRouter using any model.
+Run a code review using any model via the configured provider.
 
 Raw slash-command arguments:
 `$ARGUMENTS`
