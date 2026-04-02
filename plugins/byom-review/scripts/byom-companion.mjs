@@ -261,7 +261,7 @@ async function executeReviewRun(request) {
 
 async function handleReview(argv, reviewName = "Review") {
   const { options, positionals } = parseCommandInput(argv, {
-    valueOptions: ["base", "scope", "model", "provider", "cwd"],
+    valueOptions: ["base", "scope", "model", "models", "provider", "cwd"],
     booleanOptions: ["json", "wait"],
     aliasMap: {
       m: "model",

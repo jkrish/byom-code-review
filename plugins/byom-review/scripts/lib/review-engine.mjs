@@ -105,6 +105,10 @@ export async function runReview({ client, gitContext, systemPrompt, schema, mode
     throw error;
   }
 
+  if (useJsonSchema && !result.content) {
+    return runReview({ client, gitContext, systemPrompt, schema, model, useJsonSchema: false });
+  }
+
   const parsed = parseStructuredOutput(result.content);
 
   return {
