@@ -1,15 +1,12 @@
-const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
-const DEFAULT_MODEL = "minimax/minimax-m2.7";
-const API_KEY_ENV = "OPENROUTER_API_KEY";
-const DEFAULT_MODEL_ENV = "BYOM_DEFAULT_MODEL";
-
-export { API_KEY_ENV, DEFAULT_MODEL_ENV, DEFAULT_MODEL };
-
-export class OpenRouterClient {
-  constructor(options = {}) {
-    this.apiKey = options.apiKey || process.env[API_KEY_ENV] || "";
-    this.baseUrl = options.baseUrl || process.env.OPENROUTER_BASE_URL || DEFAULT_BASE_URL;
-    this.defaultModel = options.defaultModel || process.env[DEFAULT_MODEL_ENV] || DEFAULT_MODEL;
+export class ProviderClient {
+  constructor(provider, options = {}) {
+    this.provider = provider;
+    this.apiKey = options.apiKey || process.env[provider.apiKeyEnv] || "";
+    this.baseUrl =
+      options.baseUrl ||
+      (provider.baseUrlEnv ? process.env[provider.baseUrlEnv] : undefined) ||
+      provider.baseUrl;
+    this.defaultModel = options.defaultModel || "";
   }
 
   get isConfigured() {
@@ -19,7 +16,7 @@ export class OpenRouterClient {
   async chatCompletion({ messages, model, responseFormat, temperature, maxTokens }) {
     if (!this.apiKey) {
       throw new Error(
-        `OPENROUTER_API_KEY is not set. Get one at https://openrouter.ai/keys and set it in your environment.`
+        `${this.provider.apiKeyEnv} is not set. Set it in your environment to use ${this.provider.label}.`
       );
     }
 
@@ -38,14 +35,15 @@ export class OpenRouterClient {
       body.max_tokens = maxTokens;
     }
 
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: this.provider.authHeader(this.apiKey),
+      ...this.provider.extraHeaders
+    };
+
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": "https://github.com/jkrish/byom-code-review",
-        "X-Title": "byom-code-review"
-      },
+      headers,
       body: JSON.stringify(body)
     });
 
@@ -59,7 +57,7 @@ export class OpenRouterClient {
         detail = errorBody;
       }
       throw new Error(
-        `OpenRouter API error (${response.status}): ${detail}`
+        `${this.provider.label} API error (${response.status}): ${detail}`
       );
     }
 
@@ -75,13 +73,15 @@ export class OpenRouterClient {
   async listModels() {
     const response = await fetch(`${this.baseUrl}/models`, {
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "HTTP-Referer": "https://github.com/jkrish/byom-code-review",
-        "X-Title": "byom-code-review"
+        Authorization: this.provider.authHeader(this.apiKey),
+        ...this.provider.extraHeaders
       }
     });
 
     if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
       throw new Error(`Failed to list models (${response.status})`);
     }
 
@@ -92,6 +92,9 @@ export class OpenRouterClient {
   async validateApiKey() {
     try {
       const models = await this.listModels();
+      if (models === null) {
+        return { valid: "unknown" };
+      }
       return { valid: true, modelCount: models.length };
     } catch (error) {
       return { valid: false, error: error.message };
