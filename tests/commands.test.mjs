@@ -27,7 +27,7 @@ test("review command uses AskUserQuestion and background Bash while staying revi
   assert.match(source, /git diff --shortstat/);
   assert.match(source, /When in doubt, run the review/i);
   assert.match(source, /\(Recommended\)/);
-  assert.match(source, /OpenRouter/i);
+  assert.match(source, /--provider/);
 });
 
 test("adversarial review command uses AskUserQuestion and background Bash while staying review-only", () => {
@@ -46,7 +46,7 @@ test("adversarial review command uses AskUserQuestion and background Bash while 
   assert.match(source, /git status --short --untracked-files=all/);
   assert.match(source, /When in doubt, run the review/i);
   assert.match(source, /\(Recommended\)/);
-  assert.match(source, /OpenRouter/i);
+  assert.match(source, /--provider/);
   assert.match(source, /can take extra focus text after the flags/i);
 });
 
@@ -59,12 +59,14 @@ test("only review commands are exposed", () => {
   ]);
 });
 
-test("setup command references OpenRouter API key", () => {
+test("setup command references provider configuration", () => {
   const setup = read("commands/setup.md");
   assert.match(setup, /OPENROUTER_API_KEY/);
+  assert.match(setup, /BASETEN_API_KEY/);
+  assert.match(setup, /BYOM_CUSTOM_API_KEY/);
   assert.match(setup, /byom-companion\.mjs" setup --json/);
-  assert.match(setup, /openrouter\.ai\/keys/);
   assert.match(setup, /BYOM_DEFAULT_MODEL/);
+  assert.match(setup, /BYOM_DEFAULT_PROVIDER/);
 });
 
 test("hooks are configured for session lifecycle only", () => {
@@ -79,6 +81,7 @@ test("plugin manifest has correct name and description", () => {
   const plugin = JSON.parse(read(".claude-plugin/plugin.json"));
   assert.equal(plugin.name, "byom-review");
   assert.match(plugin.description, /OpenRouter/i);
+  assert.match(plugin.description, /Baseten/i);
 });
 
 test("review output schema has required fields", () => {
