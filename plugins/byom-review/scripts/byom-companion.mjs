@@ -7,9 +7,13 @@ import { fileURLToPath } from "node:url";
 import { parseArgs, splitRawArgumentString } from "./lib/args.mjs";
 import { collectReviewContext, ensureGitRepository, resolveReviewTarget } from "./lib/git.mjs";
 import { loadPromptTemplate, interpolateTemplate } from "./lib/prompts.mjs";
-import { OpenRouterClient, API_KEY_ENV, DEFAULT_MODEL_ENV, DEFAULT_MODEL } from "./lib/openrouter.mjs";
+import { resolveProvider, listProviders } from "./lib/providers.mjs";
+import { ProviderClient } from "./lib/provider-client.mjs";
 import { readOutputSchema, runReview } from "./lib/review-engine.mjs";
 import { renderReviewResult } from "./lib/render.mjs";
+
+const DEFAULT_MODEL_ENV = "BYOM_DEFAULT_MODEL";
+const DEFAULT_MODEL = "minimax/minimax-m2.7";
 
 const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const REVIEW_SCHEMA_PATH = path.join(ROOT_DIR, "schemas", "review-output.schema.json");
@@ -66,39 +70,94 @@ function firstMeaningfulLine(text, fallback) {
   return line ?? fallback;
 }
 
-function ensureApiKeyReady() {
-  if (!process.env[API_KEY_ENV]) {
+function ensureProviderReady(provider) {
+  if (!process.env[provider.apiKeyEnv]) {
     throw new Error(
-      `${API_KEY_ENV} is not set. Get an API key at https://openrouter.ai/keys and export it in your environment.`
+      `${provider.apiKeyEnv} is not set. Set it in your environment to use ${provider.label}.`
+    );
+  }
+  if (provider.name === "custom" && !process.env[provider.baseUrlEnv]) {
+    throw new Error(
+      `${provider.baseUrlEnv} is required when using the custom provider.`
     );
   }
 }
 
 function buildSetupReport() {
-  const apiKey = process.env[API_KEY_ENV] ?? "";
-  const defaultModel = process.env[DEFAULT_MODEL_ENV] || DEFAULT_MODEL;
-  const hasKey = Boolean(apiKey);
+  const providers = {};
+  let anyConfigured = false;
 
+  for (const provider of listProviders()) {
+    const hasKey = Boolean(process.env[provider.apiKeyEnv]);
+    const hasBaseUrl = provider.name !== "custom" || Boolean(process.env[provider.baseUrlEnv]);
+    const configured = hasKey && hasBaseUrl;
+
+    if (configured) {
+      anyConfigured = true;
+    }
+
+    providers[provider.name] = {
+      label: provider.label,
+      configured,
+      apiKeyEnv: provider.apiKeyEnv,
+      ...(provider.baseUrlEnv ? { baseUrlEnv: provider.baseUrlEnv } : {})
+    };
+
+    if (provider.name === "openrouter" && configured) {
+      providers[provider.name].defaultModel =
+        process.env[DEFAULT_MODEL_ENV] || DEFAULT_MODEL;
+    }
+  }
+
+  const defaultProvider = process.env.BYOM_DEFAULT_PROVIDER || "openrouter";
   const nextSteps = [];
-  if (!hasKey) {
-    nextSteps.push(`Set ${API_KEY_ENV} with your OpenRouter API key from https://openrouter.ai/keys`);
+
+  for (const [name, info] of Object.entries(providers)) {
+    if (!info.configured) {
+      if (name === "custom") {
+        nextSteps.push(
+          `To use a custom provider: export ${info.apiKeyEnv}=... and export ${info.baseUrlEnv}=...`
+        );
+      } else {
+        nextSteps.push(`To use ${info.label}: export ${info.apiKeyEnv}=your-key-here`);
+      }
+    }
   }
 
   return {
-    ready: hasKey,
-    apiKeyConfigured: hasKey,
-    defaultModel,
+    ready: anyConfigured,
+    defaultProvider,
+    providers,
     nextSteps
   };
 }
 
 function renderSetupReport(report) {
   const lines = [];
-  lines.push(`BYOM Code Review Setup`);
-  lines.push(`─────────────────────`);
-  lines.push(`API Key: ${report.apiKeyConfigured ? "✓ configured" : "✗ not set"}`);
-  lines.push(`Default Model: ${report.defaultModel}`);
+  lines.push("BYOM Code Review Setup");
+  lines.push("─────────────────────");
+  lines.push("Providers:");
+
+  for (const [name, info] of Object.entries(report.providers)) {
+    const status = info.configured ? "✓" : "✗";
+    let detail;
+    if (info.configured) {
+      detail = "API key configured";
+      if (info.defaultModel) {
+        detail += `, default model: ${info.defaultModel}`;
+      }
+    } else if (name === "custom") {
+      detail = `not configured (${info.apiKeyEnv} + ${info.baseUrlEnv})`;
+    } else {
+      detail = `API key not set (${info.apiKeyEnv})`;
+    }
+    lines.push(`  ${status} ${name.padEnd(14)}— ${detail}`);
+  }
+
+  lines.push("");
+  lines.push(`Default provider: ${report.defaultProvider}`);
   lines.push(`Ready: ${report.ready ? "yes" : "no"}`);
+
   if (report.nextSteps.length > 0) {
     lines.push("");
     lines.push("Next steps:");
@@ -106,6 +165,7 @@ function renderSetupReport(report) {
       lines.push(`  • ${step}`);
     }
   }
+
   lines.push("");
   return lines.join("\n");
 }
@@ -140,7 +200,8 @@ function buildStandardReviewPrompt(context) {
 
 
 async function executeReviewRun(request) {
-  ensureApiKeyReady();
+  const provider = request.provider;
+  ensureProviderReady(provider);
   ensureGitRepository(request.cwd);
 
   const target = resolveReviewTarget(request.cwd, {
@@ -150,7 +211,9 @@ async function executeReviewRun(request) {
 
   const context = collectReviewContext(request.cwd, target);
   const schema = readOutputSchema(REVIEW_SCHEMA_PATH);
-  const client = new OpenRouterClient();
+  const client = new ProviderClient(provider, {
+    defaultModel: process.env[DEFAULT_MODEL_ENV] || DEFAULT_MODEL
+  });
 
   const focusText = request.focusText?.trim() ?? "";
   const reviewName = request.reviewName ?? "Review";
@@ -198,13 +261,15 @@ async function executeReviewRun(request) {
 
 async function handleReview(argv, reviewName = "Review") {
   const { options, positionals } = parseCommandInput(argv, {
-    valueOptions: ["base", "scope", "model", "cwd"],
+    valueOptions: ["base", "scope", "model", "provider", "cwd"],
     booleanOptions: ["json", "wait"],
     aliasMap: {
-      m: "model"
+      m: "model",
+      p: "provider"
     }
   });
 
+  const provider = resolveProvider({ provider: options.provider });
   const cwd = resolveCommandCwd(options);
   const focusText = positionals.join(" ").trim();
 
@@ -213,6 +278,7 @@ async function handleReview(argv, reviewName = "Review") {
     base: options.base,
     scope: options.scope,
     model: options.model,
+    provider,
     focusText,
     reviewName
   });
