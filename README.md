@@ -1,8 +1,8 @@
 # BYOM Code Review — Bring Your Own Model
 
-Code review with **any AI model** via [OpenRouter](https://openrouter.ai), as a [Claude Code](https://claude.ai/code) plugin.
+Code review with **any AI model** via [OpenRouter](https://openrouter.ai), [Baseten](https://www.baseten.co), or any OpenAI-compatible provider, as a [Claude Code](https://claude.ai/code) plugin.
 
-Forked from [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) and adapted to use OpenRouter instead of the Codex app-server, so you can review code with Claude, GPT, Gemini, Llama, or any other model available on OpenRouter.
+Forked from [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) and adapted to use multiple inference providers, so you can review code with Claude, GPT, Gemini, Llama, DeepSeek, or any other model available on your chosen provider.
 
 ## What You Get
 
@@ -12,7 +12,7 @@ Forked from [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) 
 
 ## Requirements
 
-- **OpenRouter API key** — get one at [openrouter.ai/keys](https://openrouter.ai/keys)
+- **At least one provider API key** — [OpenRouter](https://openrouter.ai/keys), [Baseten](https://www.baseten.co), or any OpenAI-compatible endpoint
 - **Node.js 18.18 or later**
 
 ## Install
@@ -29,10 +29,12 @@ Add the plugin in Claude Code:
 > /plugin install byom-review
 > ```
 
-Then set your API key:
+Then set your provider API key (at least one):
 
 ```bash
 export OPENROUTER_API_KEY=sk-or-v1-your-key-here
+# or
+export BASETEN_API_KEY=your-baseten-key-here
 ```
 
 Run setup to verify:
@@ -43,12 +45,22 @@ Run setup to verify:
 
 ## Configuration
 
+### Provider Selection
+
 | Variable | Required | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | Yes | Your OpenRouter API key |
+| `BYOM_DEFAULT_PROVIDER` | No | Default provider: `openrouter` (default), `baseten`, or `custom` |
 | `BYOM_DEFAULT_MODEL` | No | Default model ID (default: `minimax/minimax-m2.7`) |
 
-You can also pass `--model <id>` on any review command to override the default.
+You can also pass `--provider <name>` and `--model <id>` on any review command to override defaults.
+
+### Provider API Keys
+
+| Provider | Variable | Base URL Override |
+|---|---|---|
+| OpenRouter | `OPENROUTER_API_KEY` | `OPENROUTER_BASE_URL` |
+| Baseten | `BASETEN_API_KEY` | `BASETEN_BASE_URL` |
+| Custom | `BYOM_CUSTOM_API_KEY` | `BYOM_CUSTOM_BASE_URL` (required) |
 
 ## Usage
 
@@ -61,6 +73,7 @@ Runs a code review on your current work using any model via OpenRouter.
 /byom-review:review --base main
 /byom-review:review --model openai/gpt-4o
 /byom-review:review --model google/gemini-2.0-flash --scope branch
+/byom-review:review --provider baseten --model deepseek-ai/DeepSeek-V3.1
 ```
 
 Supports:
@@ -91,7 +104,9 @@ Checks whether the plugin is configured with an OpenRouter API key.
 
 ## Supported Models
 
-Any model available on OpenRouter works. Popular choices:
+Model IDs are provider-specific. Here are popular choices per provider:
+
+### OpenRouter
 
 | Model | ID |
 |---|---|
@@ -102,6 +117,18 @@ Any model available on OpenRouter works. Popular choices:
 | DeepSeek R1 | `deepseek/deepseek-r1` |
 
 See the full list at [openrouter.ai/models](https://openrouter.ai/models).
+
+### Baseten
+
+| Model | ID |
+|---|---|
+| DeepSeek V3.1 | `deepseek-ai/DeepSeek-V3.1` |
+
+See available models at [baseten.co](https://www.baseten.co).
+
+### Custom Provider
+
+Use any model ID supported by your endpoint.
 
 ## Review Output
 
@@ -115,11 +142,11 @@ Reviews produce structured JSON output with:
 ## How It Works
 
 1. Collects git context (diffs, commit logs, untracked files) from your working tree or branch
-2. Sends context + review prompt to the selected model via OpenRouter's API
+2. Sends context + review prompt to the selected model via the configured provider's API
 3. Parses structured JSON output matching the review schema
 4. Returns the review result
 
-The plugin uses OpenRouter's OpenAI-compatible API with structured output support. For models that don't support `json_schema` response format, it falls back to embedding the schema in the system prompt.
+The plugin uses OpenAI-compatible APIs with structured output support. For models that don't support `json_schema` response format, it falls back to embedding the schema in the system prompt.
 
 ## Local Development
 
