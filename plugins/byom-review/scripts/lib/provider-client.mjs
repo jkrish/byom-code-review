@@ -63,8 +63,9 @@ export class ProviderClient {
     }
 
     const data = await response.json();
+    const message = data.choices?.[0]?.message;
     return {
-      content: data.choices?.[0]?.message?.content ?? "",
+      content: message?.content || message?.reasoning_content || "",
       model: data.model ?? body.model,
       usage: data.usage ?? null,
       id: data.id ?? null
