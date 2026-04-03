@@ -315,10 +315,20 @@ async function executeMultiModelReview(request) {
   const modelResults = poolResults.map((r) => {
     if (r.status === "success") {
       const reviewResult = r.value;
+      if (reviewResult.result.parsed) {
+        return {
+          model: r.id,
+          status: "success",
+          review: reviewResult.result.parsed,
+          usage: reviewResult.usage,
+          durationMs: r.durationMs
+        };
+      }
       return {
         model: r.id,
-        status: "success",
-        review: reviewResult.result.parsed,
+        status: "error",
+        review: null,
+        error: reviewResult.result.parseError || "Model returned unparseable output",
         usage: reviewResult.usage,
         durationMs: r.durationMs
       };
