@@ -10,7 +10,8 @@ import { loadPromptTemplate, interpolateTemplate } from "./lib/prompts.mjs";
 import { resolveProvider, listProviders } from "./lib/providers.mjs";
 import { ProviderClient } from "./lib/provider-client.mjs";
 import { readOutputSchema, runReview } from "./lib/review-engine.mjs";
-import { renderReviewResult } from "./lib/render.mjs";
+import { asyncPool } from "./lib/concurrency.mjs";
+import { renderReviewResult, renderMultiModelResult } from "./lib/render.mjs";
 
 const DEFAULT_MODEL_ENV = "BYOM_DEFAULT_MODEL";
 const DEFAULT_MODEL = "minimax/minimax-m2.7";
@@ -23,7 +24,7 @@ function printUsage() {
     [
       "Usage:",
       "  node scripts/byom-companion.mjs setup [--json]",
-      "  node scripts/byom-companion.mjs review [--provider <name>] [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>]",
+      "  node scripts/byom-companion.mjs review [--provider <name>] [--model <id>] [--models <id,id,...>] [--base <ref>] [--scope <auto|working-tree|branch>]",
       "  node scripts/byom-companion.mjs adversarial-review [--provider <name>] [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>] [focus text]"
     ].join("\n")
   );
@@ -81,6 +82,18 @@ function ensureProviderReady(provider) {
       `${provider.baseUrlEnv} is required when using the custom provider.`
     );
   }
+}
+
+function parseModelsFlag(value) {
+  const models = value.split(",").map((m) => m.trim()).filter(Boolean);
+  const unique = [...new Set(models)];
+  if (unique.length < 2) {
+    throw new Error("--models requires at least 2 models for comparison.");
+  }
+  if (unique.length > 5) {
+    throw new Error(`Maximum 5 models allowed for comparison. You provided ${unique.length}.`);
+  }
+  return unique;
 }
 
 function buildSetupReport() {
@@ -259,6 +272,108 @@ async function executeReviewRun(request) {
   };
 }
 
+async function executeMultiModelReview(request) {
+  const provider = request.provider;
+  ensureProviderReady(provider);
+  ensureGitRepository(request.cwd);
+
+  const target = resolveReviewTarget(request.cwd, {
+    base: request.base,
+    scope: request.scope
+  });
+
+  const context = collectReviewContext(request.cwd, target);
+  const schema = readOutputSchema(REVIEW_SCHEMA_PATH);
+  const systemPrompt = buildStandardReviewPrompt(context);
+
+  const stragglerTimeoutMs = Number(process.env.BYOM_STRAGGLER_TIMEOUT_MS) || 60000;
+  const globalTimeoutMs = Number(process.env.BYOM_GLOBAL_TIMEOUT_MS) || 300000;
+
+  const tasks = request.models.map((model) => ({
+    id: model,
+    run: async (signal) => {
+      const client = new ProviderClient(provider, {
+        defaultModel: model
+      });
+      return runReview({
+        client,
+        gitContext: context,
+        systemPrompt,
+        schema,
+        model,
+        signal
+      });
+    }
+  }));
+
+  const poolResults = await asyncPool(tasks, {
+    concurrency: 3,
+    stragglerTimeoutMs,
+    globalTimeoutMs
+  });
+
+  const modelResults = poolResults.map((r) => {
+    if (r.status === "success") {
+      const reviewResult = r.value;
+      return {
+        model: r.id,
+        status: "success",
+        review: reviewResult.result.parsed,
+        usage: reviewResult.usage,
+        durationMs: r.durationMs
+      };
+    }
+    return {
+      model: r.id,
+      status: r.status,
+      review: null,
+      error: r.error,
+      usage: null,
+      durationMs: r.durationMs
+    };
+  });
+
+  modelResults.sort((a, b) => a.model.localeCompare(b.model, undefined, { sensitivity: "base" }));
+
+  const completed = modelResults.filter((m) => m.status === "success").length;
+  const failed = modelResults.length - completed;
+  const totalCost = modelResults.reduce((sum, m) => sum + (m.usage?.cost ?? 0), 0);
+  const totalDurationMs = Math.max(...modelResults.map((m) => m.durationMs));
+
+  const aggregate = {
+    requested: modelResults.length,
+    completed,
+    failed,
+    totalCost: totalCost > 0 ? totalCost : null,
+    totalDurationMs
+  };
+
+  const payload = {
+    review: "Review",
+    target,
+    context: {
+      repoRoot: context.repoRoot,
+      branch: context.branch,
+      summary: context.summary
+    },
+    models: modelResults,
+    aggregate
+  };
+
+  const rendered = renderMultiModelResult({
+    reviewLabel: "Review",
+    targetLabel: target.label,
+    models: modelResults,
+    aggregate
+  });
+
+  return {
+    exitStatus: completed > 0 ? 0 : 1,
+    payload,
+    rendered
+  };
+}
+
 async function handleReview(argv, reviewName = "Review") {
   const { options, positionals } = parseCommandInput(argv, {
     valueOptions: ["base", "scope", "model", "models", "provider", "cwd"],
@@ -269,8 +384,31 @@ async function handleReview(argv, reviewName = "Review") {
     }
   });
 
+  if (options.models && options.model) {
+    throw new Error("Cannot use --model and --models together. Use --models for multi-model comparison.");
+  }
+
   if (options.models) {
-    throw new Error("--models (multi-model comparison) is not yet implemented. Use --model to run a single model.");
+    if (reviewName === "Adversarial Review") {
+      throw new Error("--models is not supported for adversarial reviews yet.");
+    }
+    const models = parseModelsFlag(options.models);
+    const provider = resolveProvider({ provider: options.provider });
+    const cwd = resolveCommandCwd(options);
+
+    const execution = await executeMultiModelReview({
+      cwd,
+      base: options.base,
+      scope: options.scope,
+      models,
+      provider
+    });
+
+    outputResult(options.json ? execution.payload : execution.rendered, options.json);
+    if (execution.exitStatus !== 0) {
+      process.exitCode = execution.exitStatus;
+    }
+    return;
   }
 
   const provider = resolveProvider({ provider: options.provider });
