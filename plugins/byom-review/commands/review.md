@@ -1,6 +1,6 @@
 ---
 description: Run a code review using any model via the configured provider
-argument-hint: '[--provider <name>] [--model <id>] [--base <ref>] [--scope auto|working-tree|branch]'
+argument-hint: '[--provider <name>] [--model <id>] [--models <id,id,...>] [--base <ref>] [--scope auto|working-tree|branch]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
@@ -37,6 +37,17 @@ Argument handling:
 - Supported models: any model ID supported by the selected provider (e.g., `anthropic/claude-sonnet-4` on OpenRouter, `deepseek-ai/DeepSeek-V3.1` on Baseten).
 - It supports working-tree review, branch review, and `--base <ref>`.
 - If the user needs custom review instructions or more adversarial framing, they should use `/byom-review:adversarial-review`.
+
+Multi-model mode:
+- When `--models` is present in `$ARGUMENTS`, the companion runs reviews across all listed models in parallel.
+- After returning the companion output verbatim, synthesize a comparative analysis covering:
+  - **Verdict consensus:** did models agree or disagree?
+  - **Finding overlap:** issues flagged by multiple models (higher confidence) vs. unique findings
+  - **Severity alignment:** did models rate the same issues at the same severity?
+  - **Notable disagreements:** where models contradicted each other, with reasoning about which is likely correct
+  - **Combined recommendation:** ship / don't ship based on weight of evidence
+- When `--models` is NOT present: behavior identical to single-model mode.
+- This command remains review-only — Claude does not fix issues or propose patches.
 
 Foreground flow:
 - Run:

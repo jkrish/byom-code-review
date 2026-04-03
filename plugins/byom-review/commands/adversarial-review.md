@@ -41,6 +41,9 @@ Argument handling:
 - It supports working-tree review, branch review, and `--base <ref>`.
 - Unlike `/byom-review:review`, it can take extra focus text after the flags.
 
+Multi-model mode:
+- `--models` is not supported for adversarial reviews. If present, the companion will return an error.
+
 Foreground flow:
 - Run:
 ```bash
