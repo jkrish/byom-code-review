@@ -20,6 +20,7 @@ test("review command uses AskUserQuestion and background Bash while staying revi
   assert.match(source, /```bash/);
   assert.match(source, /```typescript/);
   assert.match(source, /byom-companion\.mjs" review/);
+  assert.match(source, /\[--pr <number>\]/);
   assert.match(source, /\[--scope auto\|working-tree\|branch\]/);
   assert.match(source, /run_in_background:\s*true/);
   assert.match(source, /Return the command stdout verbatim, exactly as-is/i);

@@ -55,6 +55,35 @@ test("resolveReviewTarget honors explicit base overrides", () => {
   assert.equal(target.baseRef, "main");
 });
 
+test("resolveReviewTarget returns pr mode when --pr is provided", () => {
+  const cwd = makeTempDir();
+  initGitRepo(cwd);
+  fs.writeFileSync(path.join(cwd, "app.js"), "console.log('v1');\n");
+  run("git", ["add", "app.js"], { cwd });
+  run("git", ["commit", "-m", "init"], { cwd });
+
+  const target = resolveReviewTarget(cwd, { pr: "42" });
+
+  assert.equal(target.mode, "pr");
+  assert.equal(target.prNumber, "42");
+  assert.equal(target.label, "PR #42");
+  assert.equal(target.explicit, true);
+});
+
+test("resolveReviewTarget prefers --pr over dirty working tree", () => {
+  const cwd = makeTempDir();
+  initGitRepo(cwd);
+  fs.writeFileSync(path.join(cwd, "app.js"), "console.log('v1');\n");
+  run("git", ["add", "app.js"], { cwd });
+  run("git", ["commit", "-m", "init"], { cwd });
+  fs.writeFileSync(path.join(cwd, "app.js"), "console.log('v2');\n");
+
+  const target = resolveReviewTarget(cwd, { pr: "99" });
+
+  assert.equal(target.mode, "pr");
+  assert.equal(target.prNumber, "99");
+});
+
 test("resolveReviewTarget requires an explicit base when no default branch can be inferred", () => {
   const cwd = makeTempDir();
   initGitRepo(cwd);

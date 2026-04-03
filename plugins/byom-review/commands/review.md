@@ -1,6 +1,6 @@
 ---
 description: Run a code review using any model via OpenRouter
-argument-hint: '[--model <id>] [--models <id,id,...>] [--base <ref>] [--scope auto|working-tree|branch]'
+argument-hint: '[--model <id>] [--models <id,id,...>] [--base <ref>] [--pr <number>] [--scope auto|working-tree|branch]'
 disable-model-invocation: true
 allowed-tools: Read, Glob, Grep, Bash(node:*), Bash(git:*), AskUserQuestion
 ---
@@ -21,6 +21,7 @@ Execution mode rules:
   - For working-tree review, start with `git status --short --untracked-files=all`.
   - For working-tree review, also inspect both `git diff --shortstat --cached` and `git diff --shortstat`.
   - For base-branch review, use `git diff --shortstat <base>...HEAD`.
+  - For PR review (`--pr`), use `gh pr diff <number> --stat`.
   - Treat untracked files or directories as reviewable work even when `git diff --shortstat` is empty.
   - Only conclude there is nothing to review when the relevant scope is actually empty.
   - Recommend waiting only when the review is clearly tiny, roughly 1-2 files total.
@@ -32,11 +33,12 @@ Execution mode rules:
 
 Argument handling:
 - Preserve the user's arguments exactly.
-- The companion script parses `--wait`, `--model`, `--models`, `--base`, and `--scope`.
+- The companion script parses `--wait`, `--model`, `--models`, `--base`, `--pr`, and `--scope`.
 - `--model` and `--models` are mutually exclusive. The script enforces this.
 - `--models` accepts a comma-separated list of model IDs (2-5 models) for multi-model comparison.
 - Supported models: any model ID from OpenRouter (e.g., `anthropic/claude-sonnet-4`, `openai/gpt-4o`, `google/gemini-2.0-flash`).
-- It supports working-tree review, branch review, and `--base <ref>`.
+- It supports working-tree review, branch review, `--base <ref>`, and `--pr <number>`.
+- `--pr <number>` fetches the exact diff from a GitHub PR using `gh pr diff`. Cannot be combined with `--base` or `--scope`.
 - If the user needs custom review instructions or more adversarial framing, they should use `/byom-review:adversarial-review`.
 
 Foreground flow:
