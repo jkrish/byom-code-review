@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Add `--pr <number>` option to review a specific GitHub PR diff
+- Works with both `/byom-review:review` and `/byom-review:adversarial-review`
+- Fetches the exact PR diff via `gh pr diff` — cannot be combined with `--base` or `--scope`
+
 ## 1.2.0
 
 - Add multi-model simultaneous code review via `--models` flag

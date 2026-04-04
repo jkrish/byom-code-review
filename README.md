@@ -62,12 +62,14 @@ Runs a code review on your current work using any model via OpenRouter.
 /byom-review:review --model openai/gpt-4o
 /byom-review:review --model google/gemini-2.0-flash --scope branch
 /byom-review:review --models anthropic/claude-sonnet-4,openai/gpt-4o,google/gemini-2.0-flash
+/byom-review:review --pr 42
 ```
 
 Supports:
 - `--model <id>` — any OpenRouter model
 - `--models <id,id,...>` — run 2-5 models simultaneously for a multi-model comparison review
 - `--base <ref>` — branch review against a base ref
+- `--pr <number>` — review a specific GitHub PR diff (requires `gh` CLI)
 - `--scope <auto|working-tree|branch>` — review scope
 - `--wait` — run in foreground
 
@@ -79,9 +81,12 @@ Runs a **steerable** review that challenges the implementation and design.
 /byom-review:adversarial-review
 /byom-review:adversarial-review --base main challenge whether this was the right caching design
 /byom-review:adversarial-review --model anthropic/claude-sonnet-4 look for race conditions
+/byom-review:adversarial-review --pr 42 challenge the error handling strategy
 ```
 
 Uses the same target selection as `/byom-review:review`. Unlike the standard review, it accepts extra focus text after the flags.
+
+> **Note:** `--pr` cannot be combined with `--base` or `--scope`.
 
 ### `/byom-review:setup`
 
