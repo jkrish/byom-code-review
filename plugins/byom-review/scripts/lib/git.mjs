@@ -76,8 +76,18 @@ export function resolveReviewTarget(cwd, options = {}) {
 
   const requestedScope = options.scope ?? "auto";
   const baseRef = options.base ?? null;
+  const prNumber = options.pr ?? null;
   const state = getWorkingTreeState(cwd);
   const supportedScopes = new Set(["auto", "working-tree", "branch"]);
+
+  if (prNumber) {
+    return {
+      mode: "pr",
+      label: `PR #${prNumber}`,
+      prNumber,
+      explicit: true
+    };
+  }
 
   if (baseRef) {
     return {
@@ -168,6 +178,21 @@ function collectWorkingTreeContext(cwd, state) {
   };
 }
 
+function collectPrContext(cwd, prNumber) {
+  const diff = runCommandChecked("gh", ["pr", "diff", String(prNumber), "--patch"], { cwd }).stdout;
+  const prView = runCommandChecked("gh", ["pr", "view", String(prNumber), "--json", "title,number,baseRefName,headRefName,url"], { cwd });
+  const prMeta = JSON.parse(prView.stdout.trim());
+
+  return {
+    mode: "pr",
+    summary: `Reviewing PR #${prNumber}: ${prMeta.title} (${prMeta.headRefName} → ${prMeta.baseRefName}).`,
+    content: [
+      formatSection("Pull Request", `#${prMeta.number} — ${prMeta.title}\n${prMeta.headRefName} → ${prMeta.baseRefName}\n${prMeta.url}`),
+      formatSection("PR Diff", diff)
+    ].join("\n")
+  };
+}
+
 function collectBranchContext(cwd, baseRef) {
   const mergeBase = gitChecked(cwd, ["merge-base", "HEAD", baseRef]).stdout.trim();
   const commitRange = `${mergeBase}..HEAD`;
@@ -193,7 +218,9 @@ export function collectReviewContext(cwd, target) {
   const currentBranch = getCurrentBranch(cwd);
   let details;
 
-  if (target.mode === "working-tree") {
+  if (target.mode === "pr") {
+    details = collectPrContext(repoRoot, target.prNumber);
+  } else if (target.mode === "working-tree") {
     details = collectWorkingTreeContext(repoRoot, state);
   } else {
     details = collectBranchContext(repoRoot, target.baseRef);

@@ -20,8 +20,8 @@ function printUsage() {
     [
       "Usage:",
       "  node scripts/byom-companion.mjs setup [--json]",
-      "  node scripts/byom-companion.mjs review [--model <id>] [--models <id,id,...>] [--base <ref>] [--scope <auto|working-tree|branch>]",
-      "  node scripts/byom-companion.mjs adversarial-review [--model <id>] [--base <ref>] [--scope <auto|working-tree|branch>] [focus text]"
+      "  node scripts/byom-companion.mjs review [--model <id>] [--models <id,id,...>] [--base <ref>] [--pr <number>] [--scope <auto|working-tree|branch>]",
+      "  node scripts/byom-companion.mjs adversarial-review [--model <id>] [--base <ref>] [--pr <number>] [--scope <auto|working-tree|branch>] [focus text]"
     ].join("\n")
   );
 }
@@ -158,6 +158,7 @@ async function executeMultiModelReview(request) {
 
   const target = resolveReviewTarget(request.cwd, {
     base: request.base,
+    pr: request.pr,
     scope: request.scope
   });
 
@@ -281,6 +282,7 @@ async function executeReviewRun(request) {
 
   const target = resolveReviewTarget(request.cwd, {
     base: request.base,
+    pr: request.pr,
     scope: request.scope
   });
 
@@ -338,7 +340,7 @@ async function executeReviewRun(request) {
 
 async function handleReview(argv, reviewName = "Review") {
   const { options, positionals } = parseCommandInput(argv, {
-    valueOptions: ["base", "scope", "model", "models", "cwd"],
+    valueOptions: ["base", "scope", "model", "models", "pr", "cwd"],
     booleanOptions: ["json", "wait"],
     aliasMap: {
       m: "model"
@@ -353,6 +355,14 @@ async function handleReview(argv, reviewName = "Review") {
     throw new Error("--models is not supported for adversarial reviews yet.");
   }
 
+  if (options.pr && options.base) {
+    throw new Error("Cannot use --pr and --base together. --pr fetches the PR diff directly.");
+  }
+
+  if (options.pr && options.scope) {
+    throw new Error("Cannot use --pr and --scope together. --pr fetches the PR diff directly.");
+  }
+
   const cwd = resolveCommandCwd(options);
 
   if (options.models) {
@@ -360,6 +370,7 @@ async function handleReview(argv, reviewName = "Review") {
     const execution = await executeMultiModelReview({
       cwd,
       base: options.base,
+      pr: options.pr,
       scope: options.scope,
       models
     });
@@ -376,6 +387,7 @@ async function handleReview(argv, reviewName = "Review") {
   const execution = await executeReviewRun({
     cwd,
     base: options.base,
+    pr: options.pr,
     scope: options.scope,
     model: options.model,
     focusText,
